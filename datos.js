@@ -1,7 +1,7 @@
 // Datos de usuarios en memoria
 const usuarios = [
     {
-        id: "1", // Añadimos IDs para identificar mejor
+        id: "1", 
         name: 'Hamza',
         email: 'hamza@hamza.com',
         password: '123'
@@ -17,7 +17,7 @@ const usuarios = [
 // Datos de voluntariados (anuncios) en memoria
 const voluntariados = [
     {
-        id: "1", // Añadimos IDs
+        id: "1", 
         date: "01/10/2025",
         title: "Madrid",
         description: "Chico responsable se ofrece a llevar a nuestros mayores al hospital de fuenlabrada de L-V mañana",

@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-// Recuperamos la URL de conexión del archivo .env (que crearemos ahora)
+// Recuperamos la URL de conexión del archivo .env
 const uri = process.env.MONGO_URI;
 
 let db;
@@ -13,13 +13,13 @@ async function connectDB() {
     const client = new MongoClient(uri);
     await client.connect();
     
-    // Nombre de la base de datos: 'ruedas_esperanza' (puedes cambiarlo si quieres)
+    // Nombre de la base de datos: 'ruedas_esperanza'
     db = client.db('ruedas_esperanza'); 
     console.log("Conectado a MongoDB");
     return db;
   } catch (error) {
     console.error("Error conectando a MongoDB:", error);
-    process.exit(1); // Detiene la app si no hay base de datos
+    process.exit(1); // Detener la applicacion si no encontramos BBDD
   }
 }
 

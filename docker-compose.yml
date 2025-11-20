@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend-producto3:
+    build: .
+    ports:
+      - "3000:3000"
+    # Aquí es donde ocurre la "adaptación":
+    # Docker leerá tu archivo .env local y pasará las variables al contenedor.
+    # Así usamos MongoAtlas tanto en local como en Docker.
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
