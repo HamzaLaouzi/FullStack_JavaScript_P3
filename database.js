@@ -15,10 +15,10 @@ async function connectDB() {
     
     // Nombre de la base de datos: 'ruedas_esperanza' (puedes cambiarlo si quieres)
     db = client.db('ruedas_esperanza'); 
-    console.log("✅ Conectado exitosamente a MongoDB");
+    console.log("Conectado a MongoDB");
     return db;
   } catch (error) {
-    console.error("❌ Error conectando a MongoDB:", error);
+    console.error("Error conectando a MongoDB:", error);
     process.exit(1); // Detiene la app si no hay base de datos
   }
 }
