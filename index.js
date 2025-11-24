@@ -5,8 +5,15 @@ const { connectDB } = require('./database');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+const express = require('express');
 const app = express();
-const PORT = 3000;
+
+const usersRouter = require('./routes/users');
+app.use('/users', usersRouter);
+
+app.listen(3000, () => {
+  console.log('Servidor en marcha');
+});
 
 // Middleware para decodificar el token
 const authMiddleware = (req, res, next) => {
