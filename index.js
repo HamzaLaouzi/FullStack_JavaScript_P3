@@ -1,93 +1,69 @@
-/**
- * Importa los módulos y configura las variables de entorno.
- * Define y configura el servidor Express, los middlewares, rutas, GraphQL y la base de datos.
- * @module index
- */
+const express = require('express'); // Importamos el módulo "express"
+const { createHandler } = require('graphql-http/lib/use/express'); // Importamos "createHandler" desde la librería "graphql-http"
+const schema = require('./GraphQl/schema.js'); // Importamos los schemas GraphQL
+const root = require('./graphql/resolvers.js'); // Importamos los resolvers GraphQL
+const { verifyToken, getUserFromToken } = require("./auth.js"); // Importamos funciones de autenticación
 
-const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
-const { schema, root } = require('./schema');
-const { connectDB } = require('./database');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+// const userRoutes = require('./routes/userRoutes.js');
+// const cardRoutes = require('./routes/cardRoutes.js');
 
-/**
- * Instancia principal de la aplicación Express.
- * @type {object}
- */
+const port = 4000; // Puerto en el que se ejecutará el servidor
+const route = "graphql"; // Ruta base para GraphQL
 
-const express = require('express');
-const app = express();
-const usersRouter = require('./routes/users');
-app.use('/users', usersRouter);
-
-app.listen(3000, () => {
-  console.log('Servidor en marcha');
-});
+const app = express(); // Inicializamos la aplicación de Express
 
 /**
- * Middleware para decodificar el token JWT de la cabecera Authorization.
- * Adjunta el usuario decodificado a la petición (req.user).
- * @param {object} req - La petición HTTP.
- * @param {object} res - La respuesta HTTP.
- * @param {function} next - Función para pasar al siguiente middleware.
- * @returns {void}
+ * Ruta de prueba para confirmar que el servidor está funcionando.
+ * @name GET/
+ * @function
+ * @memberof module:expressApp
+ * @param {Object} req - Objeto de solicitud HTTP
+ * @param {Object} res - Objeto de respuesta HTTP
+ * @returns {String} Mensaje de bienvenida
  */
-const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+app.get('/', (req, res) => res.send('Bienvenido a mi API GraphQL'));
 
-  if (authHeader) {
-    const token = authHeader.split(' ')[1]; // Formato: "Bearer <token>"
-    if (token) {
-      try {
-        const user = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = user; // Adjuntamos el usuario decodificado a la petición
-      } catch (err) {
-        console.log("Token inválido");
-      }
-    }
-  }
-  next();
-};
-/**
- * Aplica el middleware de autenticación a todas las rutas.
- */
-app.use(authMiddleware);
+// Middleware para parsear JSON
+app.use(express.json());
 
 /**
- * Endpoint GraphQL.
- * Configura el servidor de GraphQL con el esquema y el root.
- * Pasa el usuario autenticado (si lo hay) al contexto.
+ * Configura el middleware para manejar peticiones GraphQL.
+ * 
+ * @name POST/graphql
+ * @function
+ * @memberof module:expressApp
+ * @param {Object} req - Objeto de solicitud HTTP
+ * @param {Object} res - Objeto de respuesta HTTP
+ * @returns {Object} Contexto que incluye el usuario autenticado
  */
-
-app.use('/graphql', graphqlHTTP((req) => ({
-  schema: schema,
+app.use('/' + route, createHandler({
+  schema,
   rootValue: root,
-  graphiql: true,
-  // Pasamos el usuario detectado (si existe) al contexto de GraphQL
-  context: {
-    user: req.user
+  /**
+   * Función de contexto para GraphQL.
+   * Extrae y verifica el token de autorización para obtener los datos del usuario.
+   * 
+   * @async
+   * @param {Object} req - Objeto de solicitud HTTP
+   * @param {Object} res - Objeto de respuesta HTTP
+   * @returns {Promise<Object>} Objeto de contexto con información del usuario
+   */
+  context: async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    const userData = token ? verifyToken(token) : null;
+    const currentUser = getUserFromToken(token);
+    return { user: userData, currentUser };
   }
-})));
+}));
+
+// Rutas comentadas para futuras implementaciones
+// app.use('/api/users', userRoutes);
+// app.use('/api/cards', cardRoutes);
 
 /**
- * Endpoint raíz '/' que indica el funcionamiento del servidor.
- * @param {object} req - La petición HTTP.
- * @param {object} res - La respuesta HTTP.
- * @returns {void}
+ * Inicia el servidor en el puerto especificado y muestra la URL de acceso en consola.
+ * 
+ * @function
+ * @memberof module:expressApp
  */
-
-app.get('/', (req, res) => {
-    res.send('¡Hola! El servidor backend del Producto 3 está funcionando');
-});
-
-/**
- * Conecta a la base de datos y arranca el servidor.
- * Muestra los endpoints disponibles en consola.
- */
-connectDB().then(() => {
-  app.listen(PORT, () => {
-      console.log(`Servidor escuchando en http://localhost:${PORT}`);
-      console.log(`Prueba GraphQL en http://localhost:${PORT}/graphql`);
-  });
-});
+app.listen(port, () => console.log('Servidor en http://localhost:' + port + '/' + route));
