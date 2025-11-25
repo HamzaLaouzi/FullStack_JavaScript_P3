@@ -1,7 +1,5 @@
 const jwt = require("jsonwebtoken"); // Importamos la librería jsonwebtoken para manejar JWT
 
-const SECRET_KEY = "Miniatura"; // Clave secreta para firmar y verificar los tokens JWT
-
 const auth = {
   /**
    * Genera un token JWT para un usuario dado.

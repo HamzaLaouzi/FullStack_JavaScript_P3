@@ -1,33 +1,34 @@
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-// Recuperamos la URL de conexión del archivo .env
-const uri = process.env.MONGO_URI;
+// Usa la variable de entorno o local por defecto
+const uri = process.env.MONGO_URI || "mongodb://localhost:27017";
+const dbName = "ruedas_esperanza"; // Nombre consistente de tu BD
 
-let db;
+let client;
+let db; // Variable para almacenar la instancia de la base de datos (Singleton)
 
 async function connectDB() {
-  if (db) return db; // Si ya estamos conectados, devuelve la conexión existente
+  // Si ya existe una conexión, la devolvemos inmediatamente (Singleton)
+  if (db) return db;
 
   try {
-    const client = new MongoClient(uri);
+    client = new MongoClient(uri);
     await client.connect();
     
-    // Nombre de la base de datos: 'ruedas_esperanza'
-    db = client.db('ruedas_esperanza'); 
-    console.log("Conectado a MongoDB");
+    db = client.db(dbName);
+    console.log(`🟢 Conectado a MongoDB en: ${dbName}`);
     return db;
   } catch (error) {
-    console.error("Error conectando a MongoDB:", error);
-    process.exit(1); // Detener la applicacion si no encontramos BBDD
+    console.error("🔴 Error fatal conectando a MongoDB:", error);
+    process.exit(1); // Detenemos la app si no hay base de datos
   }
 }
 
+// Función auxiliar opcional por si necesitas acceder sin await en otros sitios (avanzado)
 function getDB() {
-  if (!db) {
-    throw new Error('La base de datos no está inicializada. Llama a connectDB primero.');
-  }
-  return db;
+    if (!db) throw new Error("La base de datos no está inicializada");
+    return db;
 }
 
 module.exports = { connectDB, getDB };

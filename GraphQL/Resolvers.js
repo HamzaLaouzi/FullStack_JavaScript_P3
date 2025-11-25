@@ -1,4 +1,3 @@
-const { connectDB } = require("../mongo"); // Importa la función para conectar con MongoDB
 const { generateToken } = require("../auth"); // Importa la función para generar JWT
 const { ObjectId } = require('mongodb'); // Importa ObjectId para manejo de IDs en MongoDB
 const bcrypt = require("bcryptjs"); // Importa bcrypt para hashear contraseñas
