@@ -1,4 +1,5 @@
-const jwt = require("jsonwebtoken"); // Importamos la librería jsonwebtoken para manejar JWT
+const jwt = require("jsonwebtoken");  // Importamos la librería jsonwebtoken para manejar JWT
+const SECRET_KEY = process.env.SECRET_KEY || "Miniatura";
 
 const auth = {
   /**

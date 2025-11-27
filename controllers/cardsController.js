@@ -14,7 +14,7 @@ exports.getCardsByType = (req, res) => {
 // Create
 exports.createCard = (req, res) => {
   const { date, title, description, autor, volunType, email } = req.body;
-  cards.push({ date, title, description, autor, volunType, email });
+  cards.push({ date, title, description, autor, email, volunType });
   res.status(201).json({ message: 'Card creada correctamente' });
 };
 

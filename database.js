@@ -17,10 +17,10 @@ async function connectDB() {
     await client.connect();
     
     db = client.db(dbName);
-    console.log(`🟢 Conectado a MongoDB en: ${dbName}`);
+    console.log(`Conectado a MongoDB en: ${dbName}`);
     return db;
   } catch (error) {
-    console.error("🔴 Error fatal conectando a MongoDB:", error);
+    console.error("Error fatal conectando a MongoDB:", error);
     process.exit(1); // Detenemos la app si no hay base de datos
   }
 }
