@@ -49,7 +49,9 @@ app.use('/' + route, createHandler({
    * @returns {Promise<Object>} Objeto de contexto con información del usuario
    */
   context: async (req, res) => {
+    console.log("Cabecera recibida:", req.headers.authorization);
     const token = req.headers.authorization?.split(' ')[1];
+    console.log("Token extraído:", token);
     const userData = token ? verifyToken(token) : null;
     const currentUser = getUserFromToken(token);
     return { user: userData, currentUser };
