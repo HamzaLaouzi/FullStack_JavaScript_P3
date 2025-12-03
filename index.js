@@ -1,7 +1,7 @@
 const express = require('express'); // Importamos el módulo "express"
 const { createHandler } = require('graphql-http/lib/use/express'); // Importamos "createHandler" desde la librería "graphql-http"
-const schema = require('./GraphQl/schema.js'); // Importamos los schemas GraphQL
-const root = require('./GraphQl/resolvers.js'); // Importamos los resolvers GraphQL
+const schema = require('./GraphQL/schema.js'); // Importamos los schemas GraphQL
+const root = require('./GraphQL/Resolvers.js'); // Importamos los resolvers GraphQL
 const { verifyToken, getUserFromToken } = require("./auth.js"); // Importamos funciones de autenticación
 
 // const userRoutes = require('./routes/userRoutes.js');
@@ -21,7 +21,7 @@ const app = express(); // Inicializamos la aplicación de Express
  * @param {Object} res - Objeto de respuesta HTTP
  * @returns {String} Mensaje de bienvenida
  */
-app.get('/', (req, res) => res.send('Bienvenido a mi API GraphQL'));
+app.get('/', (req, res) => res.send('API GraphQL funcionando correctamente'));
 
 // Middleware para parsear JSON
 app.use(express.json());

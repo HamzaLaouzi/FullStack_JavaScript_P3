@@ -1,36 +1,17 @@
 version: '3.8'
 
 services:
-  # Servicio de tu Backend
   app:
     container_name: backend-producto3
     build: .
     ports:
       - "4000:4000"
     environment:
-      # IMPORTANTE: En Docker, 'localhost' no funciona entre contenedores.
-      # Usamos el nombre del servicio de la BBDD: 'mongodb'
-      - MONGO_URI=mongodb+srv://hamzita88_db_user:aM8e1m2RvXuZPKb0@teamscript.tlef8ji.mongodb.net/?appName=TeamScript
-      - SECRET_KEY=UnaFraseSuperSecretaParaTuToken
-  
-    depends_on:
-      - mongodb
+      # lee estas variables desde tu archivo .env
+      - MONGO_URI=${MONGO_URI}
+      - SECRET_KEY=${SECRET_KEY}
     networks:
       - app-network
-
-  # Servicio de MongoDB
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - app-network
-
-volumes:
-  mongo_data:
 
 networks:
   app-network:
