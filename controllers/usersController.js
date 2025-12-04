@@ -1,5 +1,5 @@
 /**
- * Obtiene y responde con el listado de usuarios.
+ * Lista todos los usuarios.
  * @param {object} req - Solicitud HTTP (Request).
  * @param {object} res - Respuesta HTTP (Response).
  * @returns {void}

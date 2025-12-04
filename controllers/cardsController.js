@@ -1,37 +1,30 @@
-const { cards } = require('../data/storage');
+// Nota: Para operaciones reales, usa GraphQL en /graphql
+// Estos endpoints REST son simples stubs
 
 // Read
-exports.getAllCards = (req, res) => res.json(cards);
-exports.getCardsByEmail = (req, res) => {
-  const { email } = req.body;
-  res.json(cards.filter(card => card.email === email));
+exports.getAllCards = (req, res) => {
+  res.json({ message: 'Usa GraphQL para obtener tarjetas: POST /graphql' });
 };
+
+exports.getCardsByEmail = (req, res) => {
+  res.json({ message: 'Usa GraphQL para consultas: POST /graphql' });
+};
+
 exports.getCardsByType = (req, res) => {
-  const { type } = req.body;
-  res.json(cards.filter(card => card.volunType.toLowerCase() === type.toLowerCase()));
+  res.json({ message: 'Usa GraphQL para consultas: POST /graphql' });
 };
 
 // Create
 exports.createCard = (req, res) => {
-  const { date, title, description, autor, volunType, email } = req.body;
-  cards.push({ date, title, description, autor, email, volunType });
-  res.status(201).json({ message: 'Card creada correctamente' });
+  res.status(201).json({ message: 'Usa GraphQL para crear: POST /graphql' });
 };
 
 // Update
 exports.updateCard = (req, res) => {
-  const { title, email, newData } = req.body;
-  const card = cards.find(c => c.title === title && c.email === email);
-  if (!card) return res.status(404).json({ message: 'No encontrada' });
-  Object.assign(card, newData);
-  res.json({ message: 'Actualizada correctamente' });
+  res.json({ message: 'Usa GraphQL para actualizar: POST /graphql' });
 };
 
 // Delete
 exports.deleteCard = (req, res) => {
-  const { title, email } = req.body;
-  const index = cards.findIndex(c => c.title === title && c.email === email);
-  if (index === -1) return res.status(404).json({ message: 'No encontrada' });
-  cards.splice(index, 1);
-  res.json({ message: 'Eliminada correctamente' });
+  res.json({ message: 'Usa GraphQL para eliminar: POST /graphql' });
 };

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const cardController = require('../controllers/cardController');
+const cardController = require('../controllers/cardsController');
 
 router.get('/', cardController.getAllCards);
 router.post('/by-email', cardController.getCardsByEmail);
