@@ -4,8 +4,8 @@ const schema = require('./GraphQL/schema.js'); // Importamos los schemas GraphQL
 const root = require('./GraphQL/Resolvers.js'); // Importamos los resolvers GraphQL
 const { verifyToken, getUserFromToken } = require("./auth.js"); // Importamos funciones de autenticación
 
-// const userRoutes = require('./routes/userRoutes.js');
-// const cardRoutes = require('./routes/cardRoutes.js');
+const userRoutes = require('./routes/users.js');
+const cardRoutes = require('./routes/cards.js');
 
 const port = 4000; // Puerto en el que se ejecutará el servidor
 const route = "graphql"; // Ruta base para GraphQL
@@ -25,6 +25,10 @@ app.get('/', (req, res) => res.send('API GraphQL funcionando correctamente'));
 
 // Middleware para parsear JSON
 app.use(express.json());
+
+// Rutas REST (opcional, puedes usar GraphQL en su lugar)
+app.use('/api/users', userRoutes);
+app.use('/api/cards', cardRoutes);
 
 /**
  * Configura el middleware para manejar peticiones GraphQL.

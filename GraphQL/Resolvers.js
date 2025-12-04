@@ -62,12 +62,16 @@ const resolvers = {
   },
 
   /**
-   * Crea un nuevo usuario.
+   * Crea un nuevo usuario (público - no requiere autenticación).
    * @param {Object} param0
    * @param {Object} param0.input - Datos del usuario.
    * @returns {Promise<string>} Mensaje de confirmación.
    */
   createUser: async ({ input }) => {
+    if (!input.name || !input.email || !input.password) {
+      throw new Error("Nombre, email y contraseña son requeridos");
+    }
+
     const db = await connectDB();
     const usersCollection = db.collection("users");
 
@@ -87,13 +91,22 @@ const resolvers = {
   },
 
   /**
-   * Actualiza un usuario existente.
+   * Actualiza un usuario existente (requiere autenticación).
    * @param {Object} param0
    * @param {string} param0.email - Email del usuario a actualizar.
    * @param {Object} param0.input - Nuevos datos del usuario.
+   * @param {Object} context - Contexto con usuario autenticado.
    * @returns {Promise<string>} Mensaje de confirmación.
    */
-  updateUser: async ({ email, input }) => {
+  updateUser: async ({ email, input }, context) => {
+    if (!context.currentUser) {
+      throw new Error("Debes estar autenticado para actualizar un usuario");
+    }
+
+    if (context.currentUser.email !== email) {
+      throw new Error("Solo puedes actualizar tu propio perfil");
+    }
+
     const db = await connectDB();
     const existingUser = await db.collection("users").findOne({ email });
 
@@ -109,29 +122,51 @@ const resolvers = {
   },
 
   /**
-   * Elimina un usuario por su email.
+   * Elimina un usuario por su email (requiere autenticación).
    * @param {Object} param0
    * @param {string} param0.email - Email del usuario a eliminar.
+   * @param {Object} context - Contexto con usuario autenticado.
    * @returns {Promise<string>} Mensaje de confirmación.
    */
-  deleteUser: async ({ email }) => {
+  deleteUser: async ({ email }, context) => {
+    if (!context.currentUser) {
+      throw new Error("Debes estar autenticado para eliminar un usuario");
+    }
+
+    if (context.currentUser.email !== email) {
+      throw new Error("Solo puedes eliminar tu propia cuenta");
+    }
+
     const db = await connectDB();
     const userExists = await db.collection("users").findOne({ email });
 
     if (!userExists) throw new Error("Usuario no existe");
 
     await db.collection("users").deleteOne({ email });
+    
+    // También eliminar las tarjetas del usuario
+    await db.collection("cards").deleteMany({ email });
+    await db.collection("usercards").deleteOne({ email });
 
     return `Usuario con email ${email} eliminado correctamente`;
   },
 
   /**
-   * Crea una nueva card de voluntariado.
+   * Crea una nueva card de voluntariado (requiere autenticación).
    * @param {Object} param0
    * @param {Object} param0.input - Datos de la card.
+   * @param {Object} context - Contexto con usuario autenticado.
    * @returns {Promise<Object>} Card creada.
    */
-  createCard: async ({ input }) => {
+  createCard: async ({ input }, context) => {
+    if (!context.currentUser) {
+      throw new Error("Debes estar autenticado para crear un voluntariado");
+    }
+
+    if (context.currentUser.email !== input.email) {
+      throw new Error("Solo puedes crear voluntariados con tu propio email");
+    }
+
     const db = await connectDB();
     const user = await db.collection("users").findOne({ email: input.email });
 
@@ -145,23 +180,35 @@ const resolvers = {
       throw new Error("Tipo de voluntariado incorrecto, debe ser 'Oferta' o 'Petición'");
     }
 
-    await db.collection("cards").insertOne(input);
-
-    return input;
+    const result = await db.collection("cards").insertOne(input);
+    return { ...input, _id: result.insertedId };
   },
 
   /**
-   * Actualiza una card de voluntariado existente.
+   * Actualiza una card de voluntariado existente (requiere autenticación).
    * @param {Object} param0
    * @param {string} param0.cardId - ID de la card.
    * @param {Object} param0.input - Nuevos datos de la card.
+   * @param {Object} context - Contexto con usuario autenticado.
    * @returns {Promise<string>} Mensaje de confirmación.
    */
-  updateCard: async ({ cardId, input }) => {
+  updateCard: async ({ cardId, input }, context) => {
+    if (!context.currentUser) {
+      throw new Error("Debes estar autenticado para actualizar un voluntariado");
+    }
+
     const db = await connectDB();
 
     if (!ObjectId.isValid(cardId)) {
       throw new Error("ID de voluntariado inválido");
+    }
+
+    // Verificar que la tarjeta pertenece al usuario autenticado
+    const card = await db.collection("cards").findOne({ _id: new ObjectId(cardId) });
+    if (!card) throw new Error("Voluntariado no encontrado");
+    
+    if (card.email !== context.currentUser.email) {
+      throw new Error("Solo puedes actualizar tus propios voluntariados");
     }
 
     if (input.email && input.autor) {
@@ -189,18 +236,33 @@ const resolvers = {
   },
 
   /**
-   * Elimina una card por su ID.
+   * Elimina una card por su ID (requiere autenticación).
    * @param {Object} param0
    * @param {string} param0.cardId - ID de la card.
+   * @param {Object} context - Contexto con usuario autenticado.
    * @returns {Promise<string>} Mensaje de confirmación.
    */
-  deleteCard: async ({ cardId }) => {
+  deleteCard: async ({ cardId }, context) => {
+    if (!context.currentUser) {
+      throw new Error("Debes estar autenticado para eliminar un voluntariado");
+    }
+
     const db = await connectDB();
     const cardExists = await db.collection("cards").findOne({ _id: new ObjectId(cardId) });
 
     if (!cardExists) throw new Error('No se ha encontrado el ID del voluntariado');
 
+    if (cardExists.email !== context.currentUser.email) {
+      throw new Error("Solo puedes eliminar tus propios voluntariados");
+    }
+
     await db.collection("cards").deleteOne({ _id: new ObjectId(cardId) });
+    
+    // También eliminar de las selecciones de usuarios
+    await db.collection("usercards").updateMany(
+      { },
+      { $pull: { selectedCards: { _id: new ObjectId(cardId) } } }
+    );
 
     return `Voluntariado con ID ${cardId} eliminado correctamente`;
   },
@@ -257,13 +319,21 @@ const resolvers = {
   },
 
   /**
-   * Añade una card seleccionada para un usuario.
+   * Añade una card seleccionada para un usuario (requiere autenticación).
    * @param {Object} param0
    * @param {string} param0.email - Email del usuario.
    * @param {string} param0.cardId - ID de la card.
+   * @param {Object} context - Contexto con usuario autenticado.
    * @returns {Promise<string>} Mensaje de confirmación.
    */
-  addUserCard: async ({ email, cardId }) => {
+  addUserCard: async ({ email, cardId }, context) => {
+    if (!context.currentUser) {
+      throw new Error("Debes estar autenticado para seleccionar voluntariados");
+    }
+
+    if (context.currentUser.email !== email) {
+      throw new Error("Solo puedes seleccionar voluntariados para tu propio perfil");
+    }
     const db = await connectDB();
     const collection = db.collection('usercards');
     const collectionUsers = db.collection('users');
@@ -291,13 +361,21 @@ const resolvers = {
   },
 
   /**
-   * Elimina una card de la selección de un usuario.
+   * Elimina una card de la selección de un usuario (requiere autenticación).
    * @param {Object} param0
    * @param {string} param0.email - Email del usuario.
    * @param {string} param0.cardId - ID de la card.
+   * @param {Object} context - Contexto con usuario autenticado.
    * @returns {Promise<string>} Mensaje de confirmación.
    */
-  deleteUserCard: async ({ email, cardId }) => {
+  deleteUserCard: async ({ email, cardId }, context) => {
+    if (!context.currentUser) {
+      throw new Error("Debes estar autenticado para deseleccionar voluntariados");
+    }
+
+    if (context.currentUser.email !== email) {
+      throw new Error("Solo puedes deseleccionar voluntariados de tu propio perfil");
+    }
     const db = await connectDB();
     const collection = db.collection('usercards');
     const userCards = await collection.findOne({ email });
