@@ -2,7 +2,7 @@
 const dotenv = require('dotenv'); // variables de entorno
 dotenv.config(); // cargar configuración
 const express = require('express'); // crear el servidor web
-const {createHandler} = require('graphql-http/lib/use/express'); // manejar graphql sobre hhtp
+const {graphqlHTTP} = require('express-graphql'); // manejar graphql
 const {ruruHTML} = require('ruru/server'); // para probar graphql
 const cors = require('cors'); // permitir peticiones desde postman
 const {MongoClient} = require('mongodb'); // driver mongodb
@@ -17,9 +17,6 @@ if (!uri) {
 }
 console.log('uri encontrada')
 
-const client = new MongoClient(uri);
-let db, usuariosCollection, voluntariadosCollection;
-
 // Importar módulos --------------------------------------------------------------------------------------------------
 const schema = require('./src/schemas/schema'); // define qué preguntar
 const resolvers = require('./src/resolvers/resolvers'); // define cómo responder
@@ -33,18 +30,22 @@ const PORT = process.env.PORT || 4000; // puerto para correr el servidor
 app.use(cors()); // permitir peticiones desde postman
 app.use(express.json()); // para que express entienda json
 
+// variables globales para las coleciones ----------------------------------------------------------------------------
+let usuariosCollection, voluntariadosCollection;
+
 // conectar con la bbdd ---------------------------------------------------------------------------------------------
 async function conectarDB() {
     try {
+      const client = new MongoClient(uri);
       await client.connect();
-      db = client.db('voluntariadosDB');
+      const db = client.db('voluntariadosDB');
       usuariosCollection = db.collection('usuarios');
       voluntariadosCollection = db.collection('voluntariados');
       console.log('Conectado a mongodb');
       console.log(`Base de datos: ${db.databaseName}`);
 
       await db.command({ ping: 1 }); // ping prueba de conexión
-      console.log('✅ Ping exitoso a MongoDB Atlas');
+      console.log('ping con éxito a mongodb');
 
       try { // listar coleciones por favor funciona
             const colecciones = await db.listCollections().toArray();
@@ -55,8 +56,9 @@ async function conectarDB() {
                 console.log('no hay colecciones en la BBDD');
             }
         } catch (error) {
-            console.log('error al listar colecciones');
+            console.log('error al listar colecciones', error.message);
         }
+        return { usuariosCollection, voluntariadosCollection };
   } catch (error) {
       console.error('Error al conectar a mongodb:', error.message);
       console.error('detalles:', error);
@@ -65,21 +67,47 @@ async function conectarDB() {
   }
 
 // Configurar graphql ------------------------------------------------------------------------------------------------
-// ruta para la interfaz grafica -------------------------------------------
+async function iniciarServidor() {
+  try {
+    const collections = await conectarDB();
+
+    global.usuariosCollection = collections.usuariosCollection;
+    global.voluntariadosCollection = collections.voluntariadosCollection;
+    console.log('Conexiones en global ----------'); // verificar
+    // verificacion variables globales
+     try {
+      const countUsuarios = await global.usuariosCollection.countDocuments();
+      const countVoluntariados = await global.voluntariadosCollection.countDocuments();
+      console.log(`users en la bbdd: ${countUsuarios}`);
+      console.log(`voluntariados en la bbdd: ${countVoluntariados}`);
+    } catch (error) {
+      console.error('error al buscar elementos:', error.message);
+    }
+
+    //guardar colecciones ------------------------------------------------
+    //usuariosCollection = collections.usuariosCollection;
+    //voluntariadosCollection = collections.voluntariadosCollection;
+
+    // verificacion de colecciones definidas ------------------------------
+    console.log('usuariosCollection:', usuariosCollection ? 'Definida' : 'Undefined');
+    console.log('voluntariadosCollection:', voluntariadosCollection ? 'Definida' : 'Undefined');
+    
+    if (!usuariosCollection || !voluntariadosCollection) {
+      throw new Error('Las colecciones de MongoDB no se definieron correctamente');
+    }
+
+  
+    // ruta para la interfaz grafica ----------------------------------------
 app.get('/', (_req, res) => {
   res.type('html');
-res.end(ruruHTML({endpoint: "/graphql"}));
+  res.end(ruruHTML({endpoint: "/graphql"}));
 });
 
 // ruta para las consultas de graphql -------------------------------------
-app.all('/graphql', createHandler({
-  schema: schema, // esquema graphql
-  rootValue: resolvers, // funciones resolvers
-  context: { // datos para los resolvers
-    usuariosCollection,
-    voluntariadosCollection
-  },
-  graphiql: true // habilitar la interfaz
+app.use('/graphql', graphqlHTTP({
+  schema: schema,
+  rootValue: resolvers,
+  graphiql: true
 }));
 
 // ruta inicio -------------------------------------------------------------------------------------------------------
@@ -159,29 +187,18 @@ app.use((error, req, res, next) => {
 });
 
 // iniciar el servidor --------------------------------------------------------------------------------------------------
-async function iniciarServidor() {
-    try {
-        await conectarDB();
-        app.listen(PORT, () => {
-            console.log(`Servidor corriendo en el localhost: ${PORT}`);
-            console.log(`Interfaz graphiqL en el localhost: ${PORT}/`);
-            console.log(`🔧 Modo (dev/prod): ${process.env.NODE_ENV || 'desarrollo'}`);
-            console.log(`Conectado a mongodb Atlas`);
-        });
+    app.listen(PORT, () => {
+        console.log(`Servidor corriendo en el localhost: ${PORT}`);
+        console.log(`Interfaz graphiqL en el localhost: ${PORT}/`);
+        console.log(`🔧 Modo (dev/prod): ${process.env.NODE_ENV || 'desarrollo'}`);
+        console.log(`Conectado a mongodb Atlas`);
+    });
         
-    } catch (error) {
-        console.error('error al iniciar el servidor:', error.message);
-        process.exit(1);
-    }
-}
-
-//verificación uri por favor funcionaaaaaa
-if (!process.env.MONGODB_URI) {
-    console.error('mongodb uri no funciona');
+} catch (error){
+    console.error('error al iniciar el servidor:', error.message);
     process.exit(1);
 }
-console.log('🔍 URI de MongoDB encontrada');
+}
 
 iniciarServidor();
-
 

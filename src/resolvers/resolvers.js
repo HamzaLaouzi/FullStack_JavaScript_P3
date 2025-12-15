@@ -3,9 +3,10 @@ const { ObjectId } = require('mongodb');
 const resolvers = {
   // querys ----------------------------------------------------------------------------------------------------------------------------------------------
   // obtener los usuarios ----------------------------------------------------------------
-  usuarios: async (_, __, context) => {
+  usuarios: async () => {
+    // pruebas de contexto para depuracion    
     try {
-      const usuarios = await context.usuariosCollection.find().toArray();
+      const usuarios = await global.usuariosCollection.find().toArray();
       return usuarios.map(usuario => ({
         ...usuario,
         id: usuario._id.toString()
@@ -16,13 +17,27 @@ const resolvers = {
   },
 
   // buscar usuarios por id --------------------------------------------------------------
-  usuario: async (_, args, context) => {
+  usuario: async (parent, args) => {    
+    console.log('debug - args recibidos en resolver usuario:', args);
+    const queryArgs = parent;
+
+    if (!queryArgs || !queryArgs.id) {
+      throw new Error('se requiere el parametro ID');
+    }
+    
+    const id = queryArgs.id;
+    
     try {
-      const usuario = await context.usuariosCollection.findOne({
-        _id: new ObjectId(args.id)
+    // Validaciones
+    if (!ObjectId.isValid(id)) {
+      throw new Error(`"${id}" no es un ID válido de MongoDB`);
+    }
+    
+      const usuario = await global.usuariosCollection.findOne({
+        _id: new ObjectId(id)
       });
       if (!usuario) {
-        throw new Error(`Usuario con id ${args.id} no encontrado`);
+        throw new Error(`Usuario con id ${id} no encontrado`);
       }
       return {
         ...usuario,
@@ -34,14 +49,22 @@ const resolvers = {
   },
 
   // buscar usuario por email ------------------------------------------------------------
-  usuarioPorEmail: async (_, args, context) => {
+  usuarioPorEmail: async (parent, args) => {
+    const queryArgs = parent;
+    if (!queryArgs || !queryArgs.email) {
+      throw new Error('se requiere el parametro email');
+    }
+    const email = queryArgs.email;
     try {
-      const usuario = await context.usuariosCollection.findOne({
-        email: args.email
+      
+      const usuario = await global.usuariosCollection.findOne({
+        email: queryArgs.email
       });
+      
       if (!usuario) {
-        throw new Error(`Usuario con email ${args.email} no encontrado`);
+        throw new Error(`Usuario con email ${email} no encontrado`);
       }
+      
       return {
         ...usuario,
         id: usuario._id.toString()
@@ -52,12 +75,12 @@ const resolvers = {
   },
 
   // obtener los voluntariados -----------------------------------------------------------
-  voluntariados: async(_, __, context) => {
+  voluntariados: async() => {
     try {
-      const voluntariados = await context.voluntariadosCollection.find().toArray();
+      const voluntariados = await global.voluntariadosCollection.find().toArray();
       return voluntariados.map(v => ({
-        ...voluntariado,
-        id: voluntariado._id.toString()
+        ...v,
+        id: v._id.toString()
       }));
     } catch (error) {
       throw new Error(`Error al obtener los voluntariados: ${error.message}`);
@@ -65,14 +88,27 @@ const resolvers = {
   },
 
   // buscar voluntariado por id ----------------------------------------------------------
-  voluntariado: async (_, args, context) => {
+  voluntariado: async (parent, args) => {
+    const queryArgs = parent; 
     try {
-      const voluntariado = await context.voluntariadosCollection.findOne({
-        _id: new ObjectId(args.id)
-      });
-      if (!voluntariado) {
-        throw new Error(`Voluntariado con id ${args.id} no encontrado`);
+      if (!queryArgs || !queryArgs.id) {
+        throw new Error('Se requiere el parámetro "id"');
       }
+      
+      const id = queryArgs.id;
+
+      if (!ObjectId.isValid(id)) {
+        throw new Error(`"${id}" no es un ID válido de MongoDB`);
+      }
+      
+      const voluntariado = await global.voluntariadosCollection.findOne({
+        _id: new ObjectId(id)
+      });
+      
+      if (!voluntariado) {
+        throw new Error(`Voluntariado con id ${id} no encontrado`);
+      }
+      
       return {
         ...voluntariado,
         id: voluntariado._id.toString()
@@ -83,14 +119,20 @@ const resolvers = {
   },
 
   // buscar voluntariados por tipo -------------------------------------------------------
-  voluntariadosPorTipo: async (_, args, context) => {
+  voluntariadosPorTipo: async (parent, args) => {
+    const queryArgs = parent; 
     try {
-      const voluntariados = await context.voluntariadosCollection.find({
-        volunType: args.tipo
+      if (!queryArgs || !queryArgs.tipo) {
+        throw new Error('Se requiere el parámetro "tipo"');
+      }
+      
+      const voluntariados = await global.voluntariadosCollection.find({
+        volunType: queryArgs.tipo
       }).toArray();
-       return voluntariados.map(v => ({
-        ...voluntariado,
-        id: voluntariado._id.toString()
+      
+      return voluntariados.map(v => ({
+        ...v,
+        id: v._id.toString()
       }));
     } catch (error) {
       throw new Error(`Error al buscar voluntariados por tipo: ${error.message}`);
@@ -98,12 +140,20 @@ const resolvers = {
   },
 
   // buscar voluntariados por autor ------------------------------------------------------
-  voluntariadosPorAutor: (_, args, context) => {
+  voluntariadosPorAutor: async (parent, args) => {
+    const queryArgs = parent; 
     try {
-      const voluntariados = context.voluntariados.filter(a => a.email === args.email);
-       return voluntariados.map(v => ({
-        ...voluntariado,
-        id: voluntariado._id.toString()
+      if (!queryArgs || !queryArgs.email) {
+        throw new Error('Se requiere el parámetro "email"');
+      }
+      
+      const voluntariados = await global.voluntariadosCollection.find({
+        email: queryArgs.email
+      }).toArray();
+      
+      return voluntariados.map(v => ({
+        ...v,
+        id: v._id.toString()
       }));
     } catch (error) {
       throw new Error(`Error al buscar voluntariados por autor: ${error.message}`);
@@ -112,25 +162,30 @@ const resolvers = {
 
   // mutations -------------------------------------------------------------------------------------------------------------------------------------------
   // crear usuario ----------------------------------------------------------------------
-  crearUsuario: async (_, args, context) => {
+  crearUsuario: async (parent, args) => {
+    const mutationArgs = parent;
     try {
-      if (!args.input.name || !args.input.email || !args.input.password) { // validar datos de entrada
-        throw new Error('Completa los campos son obligatorios');
+      if (!mutationArgs || !mutationArgs.input) {
+        throw new Error('No se recibieron datos para crear el usuario');
+      }
+      
+      if (!mutationArgs.input.name || !mutationArgs.input.email || !mutationArgs.input.password) {
+        throw new Error('Los campos name, email y password son obligatorios');
       }
 
-      const emailExiste = await context.usuariosCollection.findOne({ // comprobar que el email no existe
-        email: args.input.email
-      }); 
+      const emailExiste = await global.usuariosCollection.findOne({
+        email: mutationArgs.input.email
+      });
+      
       if (emailExiste) {
         throw new Error('Este email ya tiene una cuenta');
       }
 
-      const {generarId} = require('../datos/datos'); // generar el id
       const nuevoUsuario = {
-        ...args.input,
+        ...mutationArgs.input,
         createdAt: new Date().toISOString()
       };
-      const resultado = await context.usuariosCollection.insertOne(nuevoUsuario); // añadir a la base de datos
+      const resultado = await global.usuariosCollection.insertOne(nuevoUsuario); // añadir a la base de datos
       return {
         ...nuevoUsuario,
         id: resultado.insertedId.toString()
@@ -141,33 +196,43 @@ const resolvers = {
   },
 
   // actualizar usuario -----------------------------------------------------------------
-  actualizarUsuario: async (_, args, context) => {
+  actualizarUsuario: async (parent, args) => {
+    const mutationArgs = parent;
     try {
-      const usuarioExiste = context.usuariosCollection.findOne({ // buscar el usuario
-        _id: new ObjectId(args.id)
+      if (!mutationArgs || !mutationArgs.id) {
+        throw new Error('Se requiere el parámetro "id"');
+      }
+      
+      if (!ObjectId.isValid(mutationArgs.id)) {
+        throw new Error(`"${mutationArgs.id}" no es un ID válido de mongo`);
+      }
+      
+      const usuarioExiste = await global.usuariosCollection.findOne({
+        _id: new ObjectId(mutationArgs.id)
       });
       
       if (!usuarioExiste) {
-        throw new Error(`Usuario con id ${args.id} no encontrado`);
+        throw new Error(`Usuario con id ${mutationArgs.id} no encontrado`);
       }
 
-      if (args.input.email) { // comprobar si el email ya existe
-        const emailExistente = await context.usuariosCollection.findOne({
-          email: args.input.email,
-          _id: { $ne: new ObjectId(args.id) }
+      if (mutationArgs.input && mutationArgs.input.email) {
+        const emailExistente = await global.usuariosCollection.findOne({
+          email: mutationArgs.input.email,
+          _id: { $ne: new ObjectId(mutationArgs.id) }
         });
+        
         if (emailExistente) {
           throw new Error('Este email ya tiene una cuenta');
         }
       }
 
-      await context.usuariosCollection.updateOne(
-        { _id: new ObjectId(args.id) },
-        { $set: args.input }
+      await global.usuariosCollection.updateOne(
+        { _id: new ObjectId(mutationArgs.id) },
+        { $set: mutationArgs.input }
       );
 
-      const actualizado = await context.usuariosCollection.findOne({
-        _id: new ObjectId(args.id)
+      const actualizado = await global.usuariosCollection.findOne({
+        _id: new ObjectId(mutationArgs.id)
       });
 
       return {
@@ -180,21 +245,31 @@ const resolvers = {
   },
 
   // eliminar usuario -------------------------------------------------------------------
-  eliminarUsuario: async (_, args, context) => {
+  eliminarUsuario: async (parent, args) => {
+    const mutationArgs = parent; 
     try {
-      const usuario = await context.usuariosCollection.findOne({ // buscar el usuario por índice
-        _id: new ObjectId(args.id)
+      if (!mutationArgs || !mutationArgs.id) {
+        throw new Error('Se requiere el parámetro id');
+      }
+      
+      if (!ObjectId.isValid(mutationArgs.id)) {
+        throw new Error(`"${mutationArgs.id}" no es un ID válido de mongodb`);
+      }
+      
+      const usuario = await global.usuariosCollection.findOne({
+        _id: new ObjectId(mutationArgs.id)
       });
+      
       if (!usuario) {
-        throw new Error(`Usuario con id ${args.id} no encontrado`);
+        throw new Error(`Usuario con id ${mutationArgs.id} no encontrado`);
       }
 
-      await context.usuariosCollection.deleteOne({ // eliminar el usuario
-        _id: new ObjectId(args.id)
+      await global.usuariosCollection.deleteOne({
+        _id: new ObjectId(mutationArgs.id)
       });
 
-      await context.voluntariadosCollection.deleteMany({ // eliminar voluntariados del usuario eliminado
-        email: usuario.email 
+      await global.voluntariadosCollection.deleteMany({
+        email: usuario.email
       });
       return {
         ...usuario,
@@ -206,28 +281,33 @@ const resolvers = {
   },
 
   //crear voluntariado ----------------------------------------------------------------
-  crearVoluntariado: async (_, args, context) => {
+  crearVoluntariado: async (parent, args) => {
+    const mutationArgs = parent;
     try {
-      const camposObligatorios = ['title', 'description', 'autor', 'date', 'email', 'volunType']; // validar datos
+      if (!mutationArgs || !mutationArgs.input) {
+        throw new Error('No se recibieron datos para crear el voluntariado');
+      }
+      
+      const camposObligatorios = ['title', 'description', 'autor', 'date', 'email', 'volunType'];
       for (const campo of camposObligatorios) {
-        if (!args.input[campo]) {
+        if (!mutationArgs.input[campo]) {
           throw new Error(`El campo ${campo} es obligatorio`);
         }
       }
 
-    const usuarioExiste = context.usuariosCollection.findOne({ // comprobar que el usuario exista
-      email: args.input.email
+    const usuarioExiste = await global.usuariosCollection.findOne({ // comprobar que el usuario exista
+      email: mutationArgs.input.email
     });
     if (!usuarioExiste) {
       throw new Error('No existe un usuario con este email');
     }
 
     const nuevoVoluntariado = {
-      ...args.input,
+      ...mutationArgs.input,
       createdAt: new Date().toISOString()
     };
 
-    const resultado = await context.voluntariadosCollection.insertOne(nuevoVoluntariado); // añadir a la memoria
+    const resultado = await global.voluntariadosCollection.insertOne(nuevoVoluntariado); // añadir a la memoria
     return {
       ...nuevoVoluntariado,
       id: resultado.insertedId.toString()
@@ -238,32 +318,42 @@ const resolvers = {
   },
 
   // actualizar voluntariado -----------------------------------------------------------
-  actualizarVoluntariado: async(_, args, context) => {
+  actualizarVoluntariado: async(parent, args) => {
+    const mutationArgs = parent;
     try {
-      const voluntariadoExiste = context.voluntariadosCollection.findOne({ // buscar el voluntariado por índice
-        _id: new ObjectId(args.id)
-      });
-      if (!voluntariadoExiste) {
-        throw new Error(`Voluntariado con id ${args.id} no encontrado`);
+      if (!mutationArgs || !mutationArgs.id) {
+        throw new Error('Se requiere el parámetro "id"');
       }
 
-      if (args.input.email) { // comprobar que el título no se repita
-        const tituloExistente = await context.voluntariadosCollection.findOne({
-          title: args.input.title,
-          _id: { $ne: new ObjectId(args.id) }
+      if (!ObjectId.isValid(mutationArgs.id)) {
+        throw new Error(`"${mutationArgs.id}" no es un ID válido de MongoDB`);
+      }
+      
+      const voluntariadoExiste = await global.voluntariadosCollection.findOne({
+        _id: new ObjectId(mutationArgs.id)
+      });
+      
+      if (!voluntariadoExiste) {
+        throw new Error(`Voluntariado con id ${mutationArgs.id} no encontrado`);
+      }
+
+      if (mutationArgs.input && mutationArgs.input.title) { // comprobar que el título no se repita
+        const tituloExistente = await global.voluntariadosCollection.findOne({
+          title: mutationArgs.input.title,
+          _id: { $ne: new ObjectId(mutationArgs.id) }
         });
         if (tituloExistente) {
           throw new Error('Ya existe un voluntariado con este título');
         }
       }
 
-      await context.voluntariadosCollection.updateOne( // actualizar
-        { _id: new ObjectId(args.id) },
-        { $set: args.input }
+      await global.voluntariadosCollection.updateOne( // actualizar
+        { _id: new ObjectId(mutationArgs.id) },
+        { $set: mutationArgs.input }
       );
 
-      const actualizado = await context.voluntariadosCollection.findOne({
-        _id: new ObjectId(args.id)
+      const actualizado = await global.voluntariadosCollection.findOne({
+        _id: new ObjectId(mutationArgs.id)
       });
 
       return {
@@ -275,18 +365,27 @@ const resolvers = {
     }
   },
 
-  // eliminar voluntariado -------------------------------------------------------------
-  eliminarVoluntariado: async (_, args, context) => {
+  // eliminar voluntariado ------------------------------------------------------------
+  eliminarVoluntariado: async (parent, args) => {
+    const mutationArgs = parent;
     try {
-      const voluntariado = await context.voluntariadosCollection.findOne({ // buscar el voluntariado por índice
-        _id: new ObjectId(args.id)
-      });
-      if (!voluntariado) {
-        throw new Error(`Voluntariado con id ${args.id} no encontrado`);
+      if (!mutationArgs || !mutationArgs.id) {
+        throw new Error('Se requiere el parámetro "id"');
       }
 
-      await context.voluntariadosCollection.deleteOne({ // eliminar1 el voluntariado
-        _id: new ObjectId(args.id)
+      if (!ObjectId.isValid(mutationArgs.id)) {
+        throw new Error(`"${mutationArgs.id}" no es un ID válido de MongoDB`);
+      }
+
+      const voluntariado = await global.voluntariadosCollection.findOne({ // buscar el voluntariado por índice
+        _id: new ObjectId(mutationArgs.id)
+      });
+      if (!voluntariado) {
+        throw new Error(`Voluntariado con id ${mutationArgs.id} no encontrado`);
+      }
+
+      await global.voluntariadosCollection.deleteOne({ // eliminar1 el voluntariado
+        _id: new ObjectId(mutationArgs.id)
       });
 
       return {

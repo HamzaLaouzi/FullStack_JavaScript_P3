@@ -21,19 +21,38 @@ const schema = buildSchema(`
   createdAt:String!
   }
 
-  input UserInput {
-  name:String!
-  email:String!
-  password:String!
+  # Input creacion
+  input CreateUserInput {
+    name:String!
+    email:String!
+    password:String!
   }
 
-  input VoluntariadoInput {
-  title:String!
-  description:String!
-  autor:String!
-  date:String!
-  email:String!
-  volunType:String!
+  # Input actualizacion
+  input UpdateUserInput {
+    name:String
+    email:String
+    password:String
+  }
+
+  # Input creacion
+  input CreateVoluntariadoInput {
+    title:String!
+    description:String!
+    autor:String!
+    date:String!
+    email:String!
+    volunType:String!
+  }
+  
+  # Input actualizacion
+  input UpdateVoluntariadoInput {
+    title:String
+    description:String
+    autor:String
+    date:String
+    email:String
+    volunType:String
   }
 
   type Query {
@@ -61,19 +80,19 @@ const schema = buildSchema(`
 
 type Mutation {
   # crear usuario y devuelve usuario creado -------------------
-  crearUsuario(input: UserInput!): User
+  crearUsuario(input: CreateUserInput!): User
 
   # editar usuario y devuelve usuario updated -----------------
-  actualizarUsuario(id: ID!, input: UserInput): User
+  actualizarUsuario(id: ID!, input: UpdateUserInput): User
 
   # eliminar usuario y devuleve Uusario eliminado -------------
   eliminarUsuario(id: ID!): User
 
   # crear voluntariado y devuelve voluntariado creado ---------
-  crearVoluntariado(input: VoluntariadoInput!): Voluntariado
+  crearVoluntariado(input: CreateVoluntariadoInput!): Voluntariado
 
   # editar voluntariado y devuelve voluntariado updated -------
-  actualizarVoluntariado(id: ID!, input: VoluntariadoInput): Voluntariado
+  actualizarVoluntariado(id: ID!, input: UpdateVoluntariadoInput): Voluntariado
 
   # eliminar voluntariado y devuelve voluntariado eliminado ---
   eliminarVoluntariado(id: ID!): Voluntariado
