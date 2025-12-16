@@ -79,6 +79,9 @@ const schema = buildSchema(`
 }
 
 type Mutation {
+  # autenticacion y login -------------------------------------
+  login(email: String!, password: String!): String
+
   # crear usuario y devuelve usuario creado -------------------
   crearUsuario(input: CreateUserInput!): User
 

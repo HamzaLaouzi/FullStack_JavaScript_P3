@@ -5,7 +5,8 @@
     "main": "index.js",
     "scripts": {
         "start": "node index.js",
-        "dev": "nodemon index.js"
+        "dev": "nodemon index.js",
+        "migrate": "node migrateToMongo.js"
     },
     "keywords": [
         "graphql",
@@ -16,11 +17,14 @@
     "author": "Eduard GM",
     "license": "ISC",
     "dependencies": {
+        "bcrypt": "^6.0.0",
+        "bcryptjs": "^3.0.3",
         "cors": "^2.8.5",
         "dotenv": "^17.2.3",
         "express": "^5.2.1",
         "express-graphql": "^0.12.0",
         "graphql": "^15.8.0",
+        "jsonwebtoken": "^9.0.3",
         "mongodb": "^7.0.0",
         "ruru": "^2.0.0-rc.3"
     },
